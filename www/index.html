@@ -31,10 +31,8 @@
     </head>
     <body>
 		
+		<!-- Login page -->
 		<div data-role="page" id="login">
-			<div data-role="header" data-position="fixed">
-				<h1>SRES - Log in</h1>
-			</div><!-- /header -->
 			<div role="main" class="ui-content">
 				<div>
 					<input type="text" name="username" id="username" value="" placeholder="Username">
@@ -51,56 +49,75 @@
 			</div><!-- /content -->
 		</div><!-- /page -->
 		
-		<div data-role="page" id="select_column">
-			<div data-role="header" data-position="fixed">
-				<a href="#leftpanel" class="ui-btn-left ui-btn ui-btn-icon-notext ui-icon-bars"></a>
-				<h1>SRES</h1>
-			</div><!-- /header -->
+		<!-- Select column page -->
+		<div data-role="page" id="selectcolumn">
 			<div role="main" class="ui-content">
 				<div>
-					<h1>Select column</h1>
+					<h2>Select column</h2>
 				</div>
-				<div>
-					<!-- List courses and columns -->
-					
+				<div id="selectcolumn_columnlist">
+					<!-- Space to list tables and columns -->
 				</div>
 			</div><!-- /content -->
 		</div><!-- /page -->
 		
+		<!-- Main scan page -->
 		<div data-role="page" id="scan">
-			<div data-role="header" data-position="fixed">
-				<a href="#leftpanel" class="ui-btn-left ui-btn ui-btn-icon-notext ui-icon-bars"></a>
-				<h1>SRES</h1>
-			</div><!-- /header -->
 			<div role="main" class="ui-content">
-				<div id="display_data">
-					
+				<div id="scan_columninfo">
 				</div>
-				<div id="actions">
-					<button class="ui-btn ui-icon-camera ui-btn-icon-left" id="scanner">scan</button>
+				<div id="scan_displaydata">
+				</div>
+				<div id="scan_actions">
+					<form class="ui-filterable">
+						<input id="scan_search" data-type="search" placeholder="Find a person...">
+					</form>
+					<button class="ui-btn ui-icon-camera ui-btn-icon-left" id="scan_scanner">Scan</button>
 				</div>
 			</div><!-- /content -->
 		</div><!-- /page -->
 		
+		<!-- Identify a person page -->
+		<div data-role="page" id="identifyperson">
+			<div role="main" class="ui-content">
+				<div id="identifyperson_displaydata">
+					
+				</div>
+				<div id="identifyperson_actions">
+					<form class="ui-filterable">
+						<input id="identifyperson_search" data-type="search" placeholder="Find a person...">
+					</form>
+					<button class="ui-btn ui-icon-camera ui-btn-icon-left" id="identifyperson_scanner">Scan</button>
+				</div>
+			</div><!-- /content -->
+		</div><!-- /page -->
+		
+		<!-- General header -->
+		<div data-role="header" data-position="fixed" data-theme="a">
+			<a href="#leftpanel" class="ui-btn-left ui-btn ui-btn-icon-notext ui-icon-bars" style="display:none;" data-loggedin></a>
+			<h1 style="display:none;" data-loggedin>SRES</h1>
+			<h1 data-loggedout>SRES - Log in</h1>
+		</div><!-- /header -->
+		
+		<!-- Div for left panel -->
 		<div data-role="panel" id="leftpanel" data-position="left" data-display="overlay" data-theme="a">
 			<div data-role="controlgroup">
 				<a href="javascript:scanControlCode();" class="ui-btn ui-btn-icon-left ui-icon-grid">Scan a control code</a>
+				<a href="javascript:identifyPerson();" class="ui-btn ui-btn-icon-left ui-icon-user">Identify person</a>
 				<a href="javascript:logout();" class="ui-btn ui-btn-icon-left ui-icon-power">Log out</a>
 				<a href="#" data-rel="close" class="ui-btn ui-icon-delete ui-btn-icon-left">Hide menu</a>
 			</div>
 		</div><!-- /leftpanel -->
 		
+		<!-- Template page -->
 		<div data-role="page" id="page_template">
-			<div data-role="header" data-position="fixed">
-				<h1>SRES</h1>
-			</div><!-- /header -->
 			<div role="main" class="ui-content">
 				<div>
-				
 				</div>
 			</div><!-- /content -->
 		</div><!-- /page -->
 		
+		<!-- Javascript -->
         <script type="text/javascript" src="cordova.js"></script>
 		<script src="js/jquery-2.2.2.min.js"></script>
 		<script>
@@ -111,6 +128,7 @@
 			});
 		</script>
 		<script src="js/jquery.mobile-1.4.5.min.js"></script>
+		<script src="js/moment.js"></script>
 		<script src="js/app.js"></script>
     </body>
 </html>
