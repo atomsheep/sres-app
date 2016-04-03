@@ -1,24 +1,4 @@
 <!DOCTYPE html>
-<!--
-    Copyright (c) 2012-2014 Adobe Systems Incorporated. All rights reserved.
-
-    Licensed to the Apache Software Foundation (ASF) under one
-    or more contributor license agreements.  See the NOTICE file
-    distributed with this work for additional information
-    regarding copyright ownership.  The ASF licenses this file
-    to you under the Apache License, Version 2.0 (the
-    "License"); you may not use this file except in compliance
-    with the License.  You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing,
-    software distributed under the License is distributed on an
-    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-     KIND, either express or implied.  See the License for the
-    specific language governing permissions and limitations
-    under the License.
--->
 <html>
     <head>
         <meta charset="utf-8" />
@@ -28,6 +8,111 @@
         <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=medium-dpi" />
 		<link rel="stylesheet" type="text/css" href="css/jquery.mobile-1.4.5.min.css" />
         <title>SRES Companion</title>
+		
+		<!-- Javascript -->
+        <script type="text/javascript" src="phonegap.js"></script>
+		<script type="text/javascript" src="js/jquery-2.2.2.min.js"></script>
+		<script>
+			$(document).bind('mobileinit',function(){
+				$.mobile.changePage.defaults.changeHash = false;
+				$.mobile.hashListeningEnabled = false;
+				$.mobile.pushStateEnabled = false;
+				// Globals
+				$.sres = {};
+				var session = {};
+			});
+		</script>
+		<script type="text/javascript" src="js/jquery.mobile-1.4.5.min.js"></script>
+		<script type="text/javascript" src="js/moment-2.12.0.js"></script>
+		
+		
+		
+		
+		
+		<script type="text/javascript" src="js/sres.js"></script>
+		<script>
+			document.addEventListener("deviceready", onDeviceReady, false);
+			function onDeviceReady() {
+				// Now safe to use device APIs
+			}
+			
+			$(document).one('pagebeforecreate', function() {
+				$( "body>[data-role='panel']" ).panel();
+				$("div[data-role=header]").toolbar();
+				$.sres.clearSession();
+			});
+			$(document).on("pagecontainerbeforeshow", function(event, ui) {
+				$.sres.loadHeader();
+				$("#leftpanel_scancontrolcode").bind("click", function(){ $.sres.canControlCode() });
+				$("#leftpanel_identifyperson").bind("click", function(){ $.sres.identifyPerson() });
+				$("#leftpanel_logout").bind("click", function(){ $.sres.logout() });
+			});
+			
+			
+			$(document).on("pagecreate", "#login", function() {
+				var storage = window.localStorage;
+				// Fetch stored login_target if exists
+				var loginTarget = storage.getItem('login_target');
+				if (loginTarget) {
+					$("select[id=login_target]").val(loginTarget).selectmenu('refresh');
+				}
+				// Login button event handler
+				$("#login_submit").bind("click", function() {
+					// Authenticate
+					var authResult = $.sres.testdata.testAuthenticationResponse; // TODO
+					// Process
+					if (authResult.result.success) {
+						// Login success
+						$("input[id=password]").val('');
+						storage.setItem('login_target', $("select[id=login_target]").val());
+						// Save some session variables
+						session.user.username = authResult.user.userid;
+						session.user.email = authResult.user.email;
+						session.user.authcode = authResult.authcode;
+						// Redirect
+						$.sres.redirectPage('selectcolumn');
+					} else {
+						$("#login_failed").show('fast');
+						$("input[id=password]").val('').focus();
+					}
+				});
+			}); // pagecreate login
+			
+			$(document).on("pagecreate", "#scan", function() {
+				if ($.isEmptyObject(session.currentColumn)) {
+					// No current column specified - redirect
+					redirectPage('selectcolumn');
+				} else {
+					$("#scan_columninfo").append(session.currentColumn.name);
+					// Do different things depending on scanmethod
+					// TODO
+				}
+			}); // pagecreate scan
+
+			$(document).on("pagecreate", "#identifyperson", function() {
+				// TODO
+			}); // pagecreate identifyperson
+
+			$(document).on("pagecreate", "#selectcolumn", function() {
+				// Fetch available columns from server
+				var availableColumns = $.sres.testdata.testAccessibleColumns; // TODO
+				// Show
+				var html = '';
+				availableColumns.forEach(function(table){
+					html += '<div data-role="collapsible" data-inset="false">';
+					html += '<h3>' + table.metadata.name + '</h3>';
+					html += '<ul data-role="listview">';
+					table.columns.forEach(function(column){
+						html += '<li><a href="javascript:$.sres.activateColumn(\'' + column._id + '\')">' + column.name + '</a></li>';
+					});
+					html += '</ul>';
+					html += '</div>';
+				});
+				$("#selectcolumn_columnlist").append(html).trigger('create');
+			}); // pagecreate selectcolumn
+			
+		</script>
+		
     </head>
     <body>
 		
@@ -102,10 +187,10 @@
 		<!-- Div for left panel -->
 		<div data-role="panel" id="leftpanel" data-position="left" data-display="overlay" data-theme="a">
 			<div data-role="controlgroup">
-				<a href="javascript:scanControlCode();" class="ui-btn ui-btn-icon-left ui-icon-grid">Scan a control code</a>
-				<a href="javascript:identifyPerson();" class="ui-btn ui-btn-icon-left ui-icon-user">Identify person</a>
-				<a href="javascript:logout();" class="ui-btn ui-btn-icon-left ui-icon-power">Log out</a>
-				<a href="#" data-rel="close" class="ui-btn ui-icon-delete ui-btn-icon-left">Hide menu</a>
+				<button class="ui-btn ui-btn-icon-left ui-icon-grid" id="leftpanel_scancontrolcode">Scan a control code</button>
+				<button class="ui-btn ui-btn-icon-left ui-icon-user" id="leftpanel_identifyperson">Identify person</button>
+				<button class="ui-btn ui-btn-icon-left ui-icon-power" id="leftpanel_logout">Log out</button>
+				<button data-rel="close" class="ui-btn ui-icon-delete ui-btn-icon-left">Hide menu</button>
 			</div>
 		</div><!-- /leftpanel -->
 		
@@ -117,18 +202,5 @@
 			</div><!-- /content -->
 		</div><!-- /page -->
 		
-		<!-- Javascript -->
-        <script type="text/javascript" src="cordova.js"></script>
-		<script src="js/jquery-2.2.2.min.js"></script>
-		<script>
-			$(document).bind('mobileinit',function(){
-				$.mobile.changePage.defaults.changeHash = false;
-				$.mobile.hashListeningEnabled = false;
-				$.mobile.pushStateEnabled = false;
-			});
-		</script>
-		<script src="js/jquery.mobile-1.4.5.min.js"></script>
-		<script src="js/moment.js"></script>
-		<script src="js/app.js"></script>
     </body>
 </html>

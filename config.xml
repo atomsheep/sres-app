@@ -1,6 +1,11 @@
 <?xml version='1.0' encoding='utf-8'?>
-	<widget id="au.edu.sydney.sres.companion" version="0.1.0" 
-		xmlns="http://www.w3.org/ns/widgets" xmlns:gap="http://phonegap.com/ns/1.0">
+	<widget 
+		id="au.edu.sydney.sres.companion" 
+		version="0.1.0" 
+		xmlns="http://www.w3.org/ns/widgets" 
+		xmlns:gap="http://phonegap.com/ns/1.0"
+		xmlns:android   = "http://schemas.android.com/apk/res/android"
+		>
     <name>SRES Companion</name>
     <description>
         Companion app for the Student Relationship Engagement System
@@ -43,7 +48,9 @@
     <gap:plugin name="org.apache.cordova.network-information" />
     <gap:plugin name="org.apache.cordova.splashscreen" />
     <gap:plugin name="org.apache.cordova.vibration" />
-	<gap:plugin name="com.phonegap.plugins.barcodescanner" />
+	<!--gap:plugin name="com.phonegap.plugins.barcodescanner" /-->
+	<!--plugin name="org.cloudsky.cordovaplugins.zbar" spec="tjwoon/csZBar" source="git" /-->
+	<plugin name="cordova-plugin-barcodescanner" />
     <icon src="icon.png" />
     <icon gap:platform="android" gap:qualifier="ldpi" src="www/res/icon/android/icon-36-ldpi.png" />
     <icon gap:platform="android" gap:qualifier="mdpi" src="www/res/icon/android/icon-48-mdpi.png" />
@@ -84,4 +91,12 @@
         <allow-intent href="itms:*" />
         <allow-intent href="itms-apps:*" />
     </platform>
+	<config-file platform="android" parent="/manifest" mode="merge">
+		<activity android:clearTaskOnLaunch="true"  android:screenOrientation="landscape" android:configChanges="orientation|keyboardHidden" android:exported="false" android:name="com.google.zxing.client.android.CaptureActivity" android:theme="@android:style/Theme.NoTitleBar.Fullscreen" android:windowSoftInputMode="stateAlwaysHidden">
+            <intent-filter>
+                <action android:name="com.google.zxing.client.android.SCAN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+	</config-file>
 </widget>
