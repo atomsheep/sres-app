@@ -49,8 +49,8 @@
     <gap:plugin name="org.apache.cordova.splashscreen" />
     <gap:plugin name="org.apache.cordova.vibration" />
 	<!--gap:plugin name="com.phonegap.plugins.barcodescanner" /-->
-	<!--plugin name="org.cloudsky.cordovaplugins.zbar" spec="tjwoon/csZBar" source="git" /-->
-	<plugin name="cordova-plugin-barcodescanner" />
+	<plugin name="org.cloudsky.cordovaplugins.zbar" spec="tjwoon/csZBar" source="git" />
+	<!--plugin name="cordova-plugin-barcodescanner" /-->
     <icon src="icon.png" />
     <icon gap:platform="android" gap:qualifier="ldpi" src="www/res/icon/android/icon-36-ldpi.png" />
     <icon gap:platform="android" gap:qualifier="mdpi" src="www/res/icon/android/icon-48-mdpi.png" />

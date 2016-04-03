@@ -50,12 +50,16 @@ $.sres.testdata.testColumn = {
    *********************************** */
 $.sres.scanControlCode = function() {
 	$.sres.scanSomething($.sres.scanControlCodeCallback);
+	return true;
 };
 
 $.sres.scanControlCodeCallback = function(result) {
 	if (result.success && !result.cancelled && result.result) {
-		alert(result.result.text);
+		alert(result.result);
+	} else {
+		alert('debug - something not right with scan ' + JSON.stringify(result));
 	}
+	return true;
 };
 
 $.sres.identifyPerson = function() {
@@ -107,7 +111,7 @@ $.sres.clearSession = function() {
 $.sres.scanSomething = function(callbackSuccess) {
 	var res = { 'success':false, 'cancelled':false, 'result':'' };
 	try {
-		cordova.plugins.barcodeScanner.scan(
+		/*cordova.plugins.barcodeScanner.scan(
 			function (result) {
 				res = {
 					'success': true,
@@ -118,12 +122,14 @@ $.sres.scanSomething = function(callbackSuccess) {
 					}
 				};
 				callbackSuccess(res);
+				return true;
 			}, 
 			function (error) {
 				callbackSuccess(res);
+				return false;
 			}
-		);
-		/*cloudSky.zBar.scan(
+		);*/
+		cloudSky.zBar.scan(
 			{'flash':'off'}, 
 			function(s) {
 				res.success = true;
@@ -136,11 +142,10 @@ $.sres.scanSomething = function(callbackSuccess) {
 				res.result = s;
 				return res;
 			}
-		);*/
+		);
 	} catch (err) {
-		res.success = false;
-		res.result = {'text':err};
-		return res;
+		alert('Error in scanner: ' + err);
+		return false;
 	}
 };
 
