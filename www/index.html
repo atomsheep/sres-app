@@ -38,13 +38,13 @@
 			});
 			$(document).on("pagecontainerbeforeshow", function(event, ui) {
 				$.sres.loadHeader();
-				$("#leftpanel_scancontrolcode").bind("click", function(){ $.sres.scanControlCode() });
-				$("#leftpanel_identifyperson").bind("click", function(){ $.sres.identifyPerson() });
-				$("#leftpanel_logout").bind("click", function(){ $.sres.logout() });
+				$("#leftpanel_scancontrolcode").unbind().bind("click", function(){ $.sres.scanControlCode() });
+				$("#leftpanel_selectcolumn").unbind().bind("click", function(){ $.sres.selectColumn() });
+				$("#leftpanel_identifyperson").unbind().bind("click", function(){ $.sres.identifyPerson() });
+				$("#leftpanel_logout").unbind().bind("click", function(){ $.sres.logout() });
 			});
 			
-			
-			$(document).on("pagecreate", "#login", function() {
+			$(document).on("pagebeforeshow", "#login", function() {
 				var storage = window.localStorage;
 				// Fetch stored login_target if exists
 				var loginTarget = storage.getItem('login_target');
@@ -63,7 +63,7 @@
 						// Save some session variables
 						session.user.username = authResult.user.userid;
 						session.user.email = authResult.user.email;
-						session.user.authcode = authResult.authcode;
+						session.user.token = authResult.token;
 						// Redirect
 						$.sres.redirectPage('selectcolumn');
 					} else {
@@ -71,24 +71,35 @@
 						$("input[id=password]").val('').focus();
 					}
 				});
-			}); // pagecreate login
+			}); // pagebeforeshow login
 			
-			$(document).on("pagecreate", "#scan", function() {
+			$(document).on("pagebeforeshow", "#scan", function() {
 				if ($.isEmptyObject(session.currentColumn)) {
 					// No current column specified - redirect
 					redirectPage('selectcolumn');
 				} else {
-					$("#scan_columninfo").append(session.currentColumn.name);
-					// Do different things depending on scanmethod
-					// TODO
+					$("#scan div[data-sres-starthidden]").hide();
+					$("#scan_columninfo").html(session.currentColumn.name);
+					$("#scan_scanner").unbind().bind("click", function(){ $.sres.scanStudent() });
+					// Do different things based on scanmethod
+					switch (session.currentColumn.scanmethod) {
+						case 'timestamp':
+						case 'scanselect':
+							$.sres.scanActionsCollapse(false);
+							break;
+						case 'selectscan':
+							// TODO
+							
+							break;
+					}
 				}
-			}); // pagecreate scan
+			}); // pagebeforeshow scan
 
-			$(document).on("pagecreate", "#identifyperson", function() {
+			$(document).on("pagebeforeshow", "#identifyperson", function() {
 				// TODO
-			}); // pagecreate identifyperson
+			}); // pagebeforeshow identifyperson
 
-			$(document).on("pagecreate", "#selectcolumn", function() {
+			$(document).on("pagebeforeshow", "#selectcolumn", function() {
 				// Fetch available columns from server
 				var availableColumns = $.sres.testdata.testAccessibleColumns; // TODO
 				// Show
@@ -103,8 +114,8 @@
 					html += '</ul>';
 					html += '</div>';
 				});
-				$("#selectcolumn_columnlist").append(html).trigger('create');
-			}); // pagecreate selectcolumn
+				$("#selectcolumn_columnlist").html(html).trigger('create');
+			}); // pagebeforeshow selectcolumn
 			
 		</script>
 		
@@ -132,9 +143,7 @@
 		<!-- Select column page -->
 		<div data-role="page" id="selectcolumn">
 			<div role="main" class="ui-content">
-				<div>
-					<h2>Select column</h2>
-				</div>
+				<h3 class="ui-bar ui-bar-b" style="margin-top:-0.75em; margin-left:-1em; margin-right:-1em;">Select field</h3>
 				<div id="selectcolumn_columnlist">
 					<!-- Space to list tables and columns -->
 				</div>
@@ -144,15 +153,30 @@
 		<!-- Main scan page -->
 		<div data-role="page" id="scan">
 			<div role="main" class="ui-content">
-				<div id="scan_columninfo">
+				<h3 id="scan_columninfo" class="ui-bar ui-bar-b" style="margin-top:-0.75em; margin-left:-1em; margin-right:-1em;"></h3>
+				<div id="scan_customdisplay" data-sres-starthidden="true"></div>
+				<div id="scan_displayresult_container" data-role="collapsible" data-inset="false" data-collapsed="false" data-mini="true" data-sres-starthidden="true" data-collapsed-icon="plus" data-expanded-icon="carat-d">
+					<h4>Data saved</h4>
+					<div id="scan_displayresult"></div>
 				</div>
-				<div id="scan_displaydata">
+				<div id="scan_entry_container" data-role="collapsible" data-inset="false" data-collapsed="false" data-mini="true" data-sres-starthidden="true" data-collapsed-icon="plus" data-expanded-icon="carat-d">
+					<h4>Data entry</h4>
+					<div id="scan_entry">
+						<div id="scan_entry_buttons" data-sres-starthidden="true" class="ui-grid-a ui-responsive" ></div>
+						<div id="scan_entry_custom" data-sres-starthidden="true">
+							<input type="text" id="scan_entry_custom_input" placeholder="Or enter custom data" />
+							<input type="button" id="scan_entry_custom_submit" value="Submit custom data" />
+						</div>
+					</div>
 				</div>
-				<div id="scan_actions">
-					<form class="ui-filterable">
-						<input id="scan_search" data-type="search" placeholder="Find a person...">
-					</form>
-					<button class="ui-btn ui-icon-camera ui-btn-icon-left" id="scan_scanner">Scan</button>
+				<div id="scan_actions_container" data-role="collapsible" data-inset="false" data-collapsed="false" data-mini="true" data-collapsed-icon="plus" data-expanded-icon="carat-d">
+					<h4>Find person</h4>
+					<div id="scan_actions">
+						<form class="ui-filterable">
+							<input id="scan_search" data-type="search" placeholder="Find a person...">
+						</form>
+						<button class="ui-btn ui-icon-camera ui-btn-icon-left" id="scan_scanner">Scan</button>
+					</div>
 				</div>
 			</div><!-- /content -->
 		</div><!-- /page -->
@@ -183,6 +207,7 @@
 		<div data-role="panel" id="leftpanel" data-position="left" data-display="overlay" data-theme="a">
 			<div data-role="controlgroup">
 				<button class="ui-btn ui-btn-icon-left ui-icon-grid" id="leftpanel_scancontrolcode">Scan a control code</button>
+				<button class="ui-btn ui-btn-icon-left ui-icon-edit" id="leftpanel_selectcolumn">Select a field</button>
 				<button class="ui-btn ui-btn-icon-left ui-icon-user" id="leftpanel_identifyperson">Identify person</button>
 				<button class="ui-btn ui-btn-icon-left ui-icon-power" id="leftpanel_logout">Log out</button>
 				<button data-rel="close" class="ui-btn ui-icon-delete ui-btn-icon-left">Hide menu</button>
