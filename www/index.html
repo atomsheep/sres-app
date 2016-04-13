@@ -45,38 +45,23 @@
 			});
 			
 			$(document).on("pagebeforeshow", "#login", function() {
-				var storage = window.localStorage;
 				// Fetch stored login_target if exists
-				var loginTarget = storage.getItem('login_target');
+				var loginTarget = window.localStorage.getItem('login_target');
 				if (loginTarget) {
 					$("select[id=login_target]").val(loginTarget).selectmenu('refresh');
 				}
 				// Login button event handler
 				$("#login_submit").bind("click", function() {
+					session.api.target = $("select[id=login_target]").val();
 					// Authenticate
-					var authResult = $.sres.testdata.testAuthenticationResponse; // TODO
-					// Process
-					if (authResult.result.success) {
-						// Login success
-						$("input[id=password]").val('');
-						storage.setItem('login_target', $("select[id=login_target]").val());
-						// Save some session variables
-						session.user.username = authResult.user.userid;
-						session.user.email = authResult.user.email;
-						session.user.token = authResult.token;
-						// Redirect
-						$.sres.redirectPage('selectcolumn');
-					} else {
-						$("#login_failed").show('fast');
-						$("input[id=password]").val('').focus();
-					}
+					$.sres.login($("input[id=username]").val(), $("input[id=password]").val(), session.api.target);
 				});
-			}); // pagebeforeshow login
+			});
 			
 			$(document).on("pagebeforeshow", "#scan", function() {
 				if ($.isEmptyObject(session.currentColumn)) {
 					// No current column specified - redirect
-					redirectPage('selectcolumn');
+					$.sres.redirectPage('selectcolumn');
 				} else {
 					$("#scan div[data-sres-starthidden]").hide();
 					$("#scan_columninfo").html(session.currentColumn.name);
@@ -93,29 +78,16 @@
 							break;
 					}
 				}
-			}); // pagebeforeshow scan
+			});
 
 			$(document).on("pagebeforeshow", "#identifyperson", function() {
-				// TODO
-			}); // pagebeforeshow identifyperson
+				$.sres.showIdentifyPerson();
+			});
 
 			$(document).on("pagebeforeshow", "#selectcolumn", function() {
 				// Fetch available columns from server
-				var availableColumns = $.sres.testdata.testAccessibleColumns; // TODO
-				// Show
-				var html = '';
-				availableColumns.forEach(function(table){
-					html += '<div data-role="collapsible" data-inset="false">';
-					html += '<h3>' + table.metadata.name + '</h3>';
-					html += '<ul data-role="listview">';
-					table.columns.forEach(function(column){
-						html += '<li><a href="javascript:$.sres.activateColumn(\'' + column._id + '\')">' + column.name + '</a></li>';
-					});
-					html += '</ul>';
-					html += '</div>';
-				});
-				$("#selectcolumn_columnlist").html(html).trigger('create');
-			}); // pagebeforeshow selectcolumn
+				$.sres.showSelectColumn();
+			});
 			
 		</script>
 		
@@ -130,7 +102,7 @@
 					<input type="password" name="password" id="password" value="" placeholder="Password">
 					<select name="login_target" id="login_target">
 						<option value="https://scilearn.sydney.edu.au/sres/">University of Sydney</option>
-						<option value="https://sres.otago.ac.nz/app/">University of Otago</option>
+						<option value="https://edtech.otago.ac.nz/sres/">University of Otago</option>
 					</select>
 					<input type="button" name="login_submit" id="login_submit" value="Log in">
 				</div>
@@ -143,8 +115,10 @@
 		<!-- Select column page -->
 		<div data-role="page" id="selectcolumn">
 			<div role="main" class="ui-content">
-				<h3 class="ui-bar ui-bar-b" style="margin-top:-0.75em; margin-left:-1em; margin-right:-1em;">Select field</h3>
-				<div id="selectcolumn_columnlist">
+				<h3 class="ui-bar ui-bar-b" style="margin-top:-0.75em; margin-left:-1em; margin-right:-1em;">
+					Select field
+				</h3>
+				<div id="selectcolumn_columnlist" data-role="collapsible-set" data-inset="false">
 					<!-- Space to list tables and columns -->
 				</div>
 			</div><!-- /content -->
@@ -153,8 +127,10 @@
 		<!-- Main scan page -->
 		<div data-role="page" id="scan">
 			<div role="main" class="ui-content">
-				<h3 id="scan_columninfo" class="ui-bar ui-bar-b" style="margin-top:-0.75em; margin-left:-1em; margin-right:-1em;"></h3>
-				<div id="scan_customdisplay" data-sres-starthidden="true"></div>
+				<h3 id="scan_columninfo" class="ui-bar ui-bar-b" style="margin-top:-0.75em; margin-left:-1em; margin-right:-1em;">
+				</h3>
+				<div id="scan_customdisplay" data-sres-starthidden="true">
+				</div>
 				<div id="scan_displayresult_container" data-role="collapsible" data-inset="false" data-collapsed="false" data-mini="true" data-sres-starthidden="true" data-collapsed-icon="plus" data-expanded-icon="carat-d">
 					<h4>Data saved</h4>
 					<div id="scan_displayresult"></div>
@@ -184,15 +160,19 @@
 		<!-- Identify a person page -->
 		<div data-role="page" id="identifyperson">
 			<div role="main" class="ui-content">
-				<div id="identifyperson_displaydata">
-					
+				<div id="identifyperson_displaydata_container" data-role="collapsible-set" data-inset="false">
 				</div>
-				<div id="identifyperson_actions">
-					<form class="ui-filterable">
-						<input id="identifyperson_search" data-type="search" placeholder="Find a person...">
-					</form>
-					<button class="ui-btn ui-icon-camera ui-btn-icon-left" id="identifyperson_scanner">Scan</button>
+				<div id="identifyperson_actions_container" data-role="collapsible" data-inset="false" data-collapsed="false" data-mini="true" data-collapsed-icon="plus" data-expanded-icon="carat-d">
+					<h4>Find person</h4>
+					<div id="identifyperson_actions">
+						<form class="ui-filterable">
+							<input id="identifyperson_search" data-type="search" placeholder="Find a person...">
+						</form>
+						<button class="ui-btn ui-icon-camera ui-btn-icon-left" id="identifyperson_scanner">Scan</button>
+					</div>
 				</div>
+				
+				
 			</div><!-- /content -->
 		</div><!-- /page -->
 		

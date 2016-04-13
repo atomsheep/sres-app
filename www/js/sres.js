@@ -103,7 +103,7 @@ $.sres.scanStudentCallback = function(result) {
 		alert(result.result);
 		// TODO
 		
-		// Identify user
+		// Identify user // TODO maybe implement this in scan with a callback to here??
 		var users = $.sres.findUsers(result.result);
 		if (users.length > 1) {
 			alert('Warning: more than one user identified');
@@ -122,8 +122,9 @@ $.sres.scanStudentCallback = function(result) {
 				);
 				break;
 			case 'scanselect':
-				// Collapse find person
+				// Collapse and expand relevant collapsibles
 				$.sres.scanActionsCollapse(true);
+				$.sres.scanDataentryCollapse(false);
 				// Show custom display
 				$.sres.showCustomDisplay(user.id);
 				// Show buttons
@@ -140,8 +141,6 @@ $.sres.scanStudentCallback = function(result) {
 							'/>' + 
 						'</div>';
 					valueIndex++;
-					// TODO: bind actions to buttons
-					
 				});
 				$("#scan_entry_buttons").html(html).trigger('create').show();
 				$("#scan_entry_container").show();
@@ -168,6 +167,68 @@ $.sres.identifyPerson = function() {
 $.sres.selectColumn = function() {
 	$.sres.redirectPage('selectcolumn');
 };
+$.sres.showSelectColumn = function() {
+	$.ajax({
+		url: session.api.target + 'api/papers',
+		type: 'GET',
+		data: {
+			token: session.api.token
+		},
+		success: function(data) {
+			console.log(data);
+			// Show
+			var html = '';
+			// TESTONLY
+			$.sres.testdata.testAccessibleColumns.forEach(function(table){
+				html += '<div data-role="collapsible">';
+				html += '<h3>[TESTONLY] ' + table.metadata.name + '</h3>';
+				html += '<ul data-role="listview">';
+				table.columns.forEach(function(column){
+					html += '<li><a href="javascript:$.sres.activateColumn(\'' + column._id + '\')">' + column.name + '</a></li>';
+				});
+				html += '</ul>';
+				html += '</div>';
+			});
+			
+			data.forEach(function(paper) {
+				html += '<div data-role="collapsible" data-sres-paperid="' + paper.id + '">';
+				html += '<h3>' + paper.code + ' ' + paper.name + '</h3>';
+				html += '<ul data-role="listview" data-sres-paperid="' + paper.id + '">';
+				html += '</ul>';
+				html += '</div>';
+				$.ajax({
+					url: session.api.target + 'api/columns/' + paper.id,
+					type: 'GET',
+					data: {
+						token: session.api.token
+					},
+					success: $.sres.showSelectColumnLoadColumns(paper.id),
+					error: function(data) {
+						alert('Error fetching columns from server for paper id ' + paper.id);
+					}
+				});
+			});
+			$("#selectcolumn_columnlist").html(html).trigger('create').collapsibleset('refresh');
+		},
+		error: function(data) {
+			alert('Error fetching papers from server for paper id');
+		}
+	});
+};
+$.sres.showSelectColumnLoadColumns = function(paperid) {
+	return function(data, textStatus, jqXHR) {
+		html = '';
+		data.forEach(function(column) {
+			html += '<li><a href="javascript:$.sres.activateColumn(\'' + column.id + '\')">' + column.name + '</a></li>';
+		});
+		$('ul[data-role=listview][data-sres-paperid=' + paperid + ']').append(html).listview('refresh');
+		$("#selectcolumn_columnlist").collapsibleset('refresh'); // TODO fix up
+	};
+};
+
+$.sres.showIdentifyPerson = function() {
+	
+};
 
 $.sres.logout = function() {
 	$.sres.clearSession();
@@ -177,11 +238,23 @@ $.sres.logout = function() {
 
 $.sres.activateColumn = function(columnid) {
 	// Fetch column info from server
-	var columnInfo = $.sres.testdata.testColumns[columnid]; // TODO
-	// Parse
-	session.currentColumn = columnInfo;
-	// Redirect
-	$.sres.redirectPage('scan');
+	$.ajax({
+		url: session.api.target + 'api/column/' + columnid,
+		type: 'GET',
+		data: {
+			token: session.api.token
+		},
+		success: function(data) {
+			console.log(data);
+			// Store
+			session.currentColumn = data;
+			// Redirect
+			$.sres.redirectPage('scan');
+		},
+		error: function(data) {
+			alert('Error fetching column information from server.');
+		}
+	});
 };
 
 /* **********************************
@@ -207,8 +280,38 @@ $.sres.redirectPage = function(pageid, options) {
 $.sres.clearSession = function() {
 	session = {
 		'user':{},
-		'currentColumn':{}
+		'currentColumn':{},
+		'api':{}
 	};
+};
+
+$.sres.login = function(username, password, target) {
+	$.ajax({
+		url: target + 'api/login',
+		type: 'POST',
+		data: {
+			'username':username,
+			'password':password
+		},
+		success: function(data) {
+			console.log(data);
+			// Login success
+			$("input[id=password]").val('');
+			window.localStorage.setItem('login_target', $("select[id=login_target]").val());
+			// Save some session variables
+			session.user = data.user;
+			session.api.token = data.token;
+			// Redirect
+			$.sres.redirectPage('selectcolumn');
+		},
+		error: function(data) {
+			console.log('error');
+			console.log(data);
+			// Process
+			$("#login_failed").show('fast');
+			$("input[id=password]").val('').focus();
+		}
+	});
 };
 
 $.sres.scanSomething = function(callbackSuccess) {
