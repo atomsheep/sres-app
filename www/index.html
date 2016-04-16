@@ -40,6 +40,7 @@
 				$.sres.loadHeader();
 				$("#leftpanel_scancontrolcode").unbind().bind("click", function(){ $.sres.scanControlCode() });
 				$("#leftpanel_selectcolumn").unbind().bind("click", function(){ $.sres.selectColumn() });
+				$("#leftpanel_changeentrymethod").unbind().bind("click", function(){ $.sres.changeEntryMethod() });
 				$("#leftpanel_identifyperson").unbind().bind("click", function(){ $.sres.identifyPerson() });
 				$("#leftpanel_logout").unbind().bind("click", function(){ $.sres.logout() });
 			});
@@ -59,24 +60,34 @@
 			});
 			
 			$(document).on("pagebeforeshow", "#scan", function() {
+				// Reset a few things
+				$("#scan div[data-sres-starthidden]").hide();
+				$("input[id=scan_actions_search]").val('').trigger('keyup');
+				// Determine what to show.
 				if ($.isEmptyObject(session.currentColumn)) {
-					// No current column specified - redirect
+					// No current column specified - redirect.
 					$.sres.redirectPage('selectcolumn');
+				} else if ( typeof session.scan.entryMethod === 'undefined' ) {
+					// Display the select scan entry method.
+					$("#scan_selectentrymethod").show();
+					// Bind select entrymethod.
+					$("button[id=scan_selectentrymethod_start]").unbind().bind("click", function(){ $.sres.scanSelectEntryMethod() });
+				} else if (session.scan.entryMethod == 'selectscan' && typeof session.scan.selectScanData === 'undefined') {
+					$("#leftpanel_changeentrymethod").show();
+					// Need to show the data entry interface first.
+					$("#scan_dataentry_header").html('Select data to apply to multiple');
+					$("#scan_dataentry_container").show();
+					$.sres.scanPopulateDataentry();
 				} else {
-					$("#scan div[data-sres-starthidden]").hide();
+					$("#leftpanel_changeentrymethod").show();
+					// Should be all good to display usual scan interface.
 					$("#scan_columninfo").html(session.currentColumn.name);
-					$("#scan_scanner").unbind().bind("click", function(){ $.sres.scanStudent() });
-					// Do different things based on scanmethod
-					switch (session.currentColumn.scanmethod) {
-						case 'timestamp':
-						case 'scanselect':
-							$.sres.scanActionsCollapse(false);
-							break;
-						case 'selectscan':
-							// TODO
-							
-							break;
-					}
+					$("#scan_actions_container").show();
+					$.sres.scanActionsCollapse(false);
+					// Bind scan button.
+					$("#scan_actions_scanner").unbind().bind("click", function(){ $.sres.scanStudent() });
+					// Activate find person filter.
+					$.sres.activateFindPersonFilter('scan_actions_search_results', '$.sres.scanUserIdentified');
 				}
 			});
 
@@ -129,29 +140,40 @@
 			<div role="main" class="ui-content">
 				<h3 id="scan_columninfo" class="ui-bar ui-bar-b" style="margin-top:-0.75em; margin-left:-1em; margin-right:-1em;">
 				</h3>
+				<div id="scan_selectentrymethod" data-sres-starthidden="true">
+					<fieldset data-role="controlgroup">
+						<legend>Select entry method</legend>
+						<input type="radio" name="scan_selectentrymethod" id="scan_selectentrymethod_scanselect" value="scanselect" checked="checked">
+						<label for="scan_selectentrymethod_scanselect">Scan and select (separate data for each person)</label>
+						<input type="radio" name="scan_selectentrymethod" id="scan_selectentrymethod_selectscan" value="selectscan">
+						<label for="scan_selectentrymethod_selectscan">Select and scan (apply same data to multiple people)</label>
+					</fieldset>
+					<button class="ui-btn" id="scan_selectentrymethod_start">Start</button>
+				</div>
 				<div id="scan_customdisplay" data-sres-starthidden="true">
 				</div>
-				<div id="scan_displayresult_container" data-role="collapsible" data-inset="false" data-collapsed="false" data-mini="true" data-sres-starthidden="true" data-collapsed-icon="plus" data-expanded-icon="carat-d">
+				<div id="scan_displayresult_container" data-sres-starthidden="true" data-role="collapsible" data-inset="false" data-collapsed="false" data-mini="true" data-collapsed-icon="plus" data-expanded-icon="carat-d">
 					<h4>Data saved</h4>
 					<div id="scan_displayresult"></div>
 				</div>
-				<div id="scan_entry_container" data-role="collapsible" data-inset="false" data-collapsed="false" data-mini="true" data-sres-starthidden="true" data-collapsed-icon="plus" data-expanded-icon="carat-d">
-					<h4>Data entry</h4>
-					<div id="scan_entry">
-						<div id="scan_entry_buttons" data-sres-starthidden="true" class="ui-grid-a ui-responsive" ></div>
-						<div id="scan_entry_custom" data-sres-starthidden="true">
-							<input type="text" id="scan_entry_custom_input" placeholder="Or enter custom data" />
-							<input type="button" id="scan_entry_custom_submit" value="Submit custom data" />
+				<div id="scan_dataentry_container" data-sres-starthidden="true" data-role="collapsible" data-inset="false" data-collapsed="false" data-mini="true" data-collapsed-icon="plus" data-expanded-icon="carat-d">
+					<h4 id="scan_dataentry_header">Data entry</h4>
+					<div id="scan_dataentry">
+						<div id="scan_dataentry_buttons" data-sres-starthidden="true" class="ui-grid-a ui-responsive" ></div>
+						<div id="scan_dataentry_custom" data-sres-starthidden="true">
+							<input type="text" id="scan_dataentry_custom_input" placeholder="Or enter custom data" />
+							<input type="button" id="scan_dataentry_custom_submit" value="Submit custom data" />
 						</div>
 					</div>
 				</div>
-				<div id="scan_actions_container" data-role="collapsible" data-inset="false" data-collapsed="false" data-mini="true" data-collapsed-icon="plus" data-expanded-icon="carat-d">
+				<div id="scan_actions_container" data-sres-starthidden="true" data-role="collapsible" data-inset="false" data-collapsed="false" data-mini="true" data-collapsed-icon="plus" data-expanded-icon="carat-d">
 					<h4>Find person</h4>
 					<div id="scan_actions">
+						<button class="ui-btn ui-icon-camera ui-btn-icon-left" id="scan_actions_scanner">Scan</button>
 						<form class="ui-filterable">
-							<input id="scan_search" data-type="search" placeholder="Find a person...">
+							<input id="scan_actions_search" data-type="search" placeholder="Find a person..." autocomplete="off">
 						</form>
-						<button class="ui-btn ui-icon-camera ui-btn-icon-left" id="scan_scanner">Scan</button>
+						<ul id="scan_actions_search_results" data-role="listview" data-inset="true" data-filter="true" data-input="#scan_actions_search"></ul>
 					</div>
 				</div>
 			</div><!-- /content -->
@@ -160,27 +182,25 @@
 		<!-- Identify a person page -->
 		<div data-role="page" id="identifyperson">
 			<div role="main" class="ui-content">
-				<div id="identifyperson_displaydata_container" data-role="collapsible-set" data-inset="false">
-				</div>
 				<div id="identifyperson_actions_container" data-role="collapsible" data-inset="false" data-collapsed="false" data-mini="true" data-collapsed-icon="plus" data-expanded-icon="carat-d">
 					<h4>Find person</h4>
 					<div id="identifyperson_actions">
-						<form class="ui-filterable">
-							<input id="identifyperson_search" data-type="search" placeholder="Find a person...">
-						</form>
 						<button class="ui-btn ui-icon-camera ui-btn-icon-left" id="identifyperson_scanner">Scan</button>
+						<form class="ui-filterable">
+							<input id="identifyperson_search" data-type="search" placeholder="Find a person..." autocomplete="off">
+						</form>
+						<ul id="identifyperson_search_results" data-role="listview" data-inset="true" data-filter="true" data-input="#identifyperson_search"></ul>
 					</div>
 				</div>
-				
-				
 			</div><!-- /content -->
 		</div><!-- /page -->
 		
 		<!-- General header -->
 		<div data-role="header" data-position="fixed" data-theme="a">
-			<a href="#leftpanel" class="ui-btn-left ui-btn ui-btn-icon-notext ui-icon-bars" style="display:none;" data-loggedin></a>
-			<h1 style="display:none;" data-loggedin>SRES</h1>
-			<h1 data-loggedout>SRES - Log in</h1>
+			<a href="#leftpanel" id="header_leftpanel" class="ui-btn-left ui-btn ui-btn-icon-notext ui-icon-bars" style="display:none;" data-sres-loggedin></a>
+			<h1 style="display:none;" data-sres-loggedin>SRES</h1>
+			<h1 data-sres-loggedout>SRES - Log in</h1>
+			<a href="#rightpanel" id="header_rightpanel" class="ui-btn-right ui-btn ui-btn-icon-notext ui-icon-user" style="display:none;"></a>
 		</div><!-- /header -->
 		
 		<!-- Div for left panel -->
@@ -188,11 +208,18 @@
 			<div data-role="controlgroup">
 				<button class="ui-btn ui-btn-icon-left ui-icon-grid" id="leftpanel_scancontrolcode">Scan a control code</button>
 				<button class="ui-btn ui-btn-icon-left ui-icon-edit" id="leftpanel_selectcolumn">Select a field</button>
+				<button class="ui-btn ui-btn-icon-left ui-icon-recycle" id="leftpanel_changeentrymethod" style="display:none;">Change entry method</button>
 				<button class="ui-btn ui-btn-icon-left ui-icon-user" id="leftpanel_identifyperson">Identify person</button>
 				<button class="ui-btn ui-btn-icon-left ui-icon-power" id="leftpanel_logout">Log out</button>
 				<button data-rel="close" class="ui-btn ui-icon-delete ui-btn-icon-left">Hide menu</button>
 			</div>
 		</div><!-- /leftpanel -->
+		
+		<!-- Div for right panel -->
+		<div data-role="panel" id="rightpanel" data-position="right" data-display="overlay" data-theme="a">
+			<div id="rightpanel_data_container">
+			</div>
+		</div><!-- /rightpanel -->
 		
 		<!-- Template page -->
 		<div data-role="page" id="page_template">
