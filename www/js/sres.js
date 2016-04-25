@@ -148,12 +148,14 @@ $.sres.showScan = function() {
 		// No current column specified - redirect.
 		$.sres.redirectPage('selectcolumn');
 	} else if ( typeof session.scan.entryMethod === 'undefined' ) {
+		$("#scan_columninfo").html(session.currentColumn.name);
 		$.sres.showIdentifyPersonButton(false);
 		// Display the select scan entry method.
 		$("#scan_selectentrymethod").show();
 		// Bind select entrymethod.
 		$("button[id=scan_selectentrymethod_start]").unbind().bind("click", function(){ $.sres.scanSelectEntryMethod() });
 	} else if (session.scan.entryMethod == 'selectscan' && typeof session.scan.selectScanData === 'undefined') {
+		$.sres.showIdentifyPersonButton(false);
 		$("#leftpanel_changeentrymethod").show();
 		// Need to show the data entry interface first.
 		$("#scan_dataentry_header").html('Select data to apply to multiple').trigger('create');
@@ -260,7 +262,10 @@ $.sres.scanUserIdentified = function(userId) {
 	session.scan.targetUserId = userId;
 	switch (session.scan.entryMethod) {
 		case 'selectscan':
+			// Save data for scanned user.
 			$.sres.saveUserData(userId);
+			// Clear find person box.
+			$.sres.scanActionsReset();
 			break;
 		case 'scanselect':
 			// Collapse and expand relevant collapsibles.
@@ -335,7 +340,7 @@ $.sres.identifyPerson = function() {
 	$.sres.redirectPage('identifyperson');
 };
 $.sres.showIdentifyPerson = function() {
-	// Acivate the filterable.
+	// Activate the filterable.
 	$.sres.activateFindPersonFilter('identifyperson_search_results', '$.sres.identifyPersonShowData');
 	// Clear session.rightPanel.
 	session.rightPanel = {};
@@ -693,8 +698,12 @@ $.sres.dataEntry = function(data) {
 
 $.sres.changeEntryMethod = function() {
 	delete session.scan.entryMethod;
-	delete session.scan.selectScanData;
 	$("#leftpanel").panel('close');
+	$.sres.changeSelectScanData();
+	return true;
+};
+$.sres.changeSelectScanData = function() {
+	delete session.scan.selectScanData;
 	$.sres.redirectPage('scan');
 	return true;
 };
@@ -723,11 +732,18 @@ $.sres.showSavedData = function(result, userId) {
 			return false;
 		});
 	}
-	$("#scan_displayresult_redo").unbind().bind('click', function(){
-		$("#scan_displayresult_container").collapsible('collapse');
-		$.sres.scanDataentryCollapse(false);
-		return false;
-	});
+	if (session.scan.entryMethod == 'scanselect') {
+		$("#scan_displayresult_redo").unbind().bind('click', function(){
+			$("#scan_displayresult_container").collapsible('collapse');
+			$.sres.scanDataentryCollapse(false);
+			return false;
+		})
+	} else if (session.scan.entryMethod == 'selectscan') {
+		$("#scan_displayresult_redo").unbind().bind('click', function(){
+			$.sres.changeSelectScanData();
+			return false;
+		})
+	}
 	$("#scan_displayresult_delete").unbind().bind('click', function(){
 		$.sres.saveUserData(session.scan.targetUserId, '');
 		return false;
