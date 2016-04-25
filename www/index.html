@@ -7,6 +7,7 @@
         <!-- WARNING: for iOS 7, remove the width=device-width and height=device-height attributes. See https://issues.apache.org/jira/browse/CB-4323 -->
         <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=medium-dpi" />
 		<link rel="stylesheet" type="text/css" href="css/jquery.mobile-1.4.5.min.css" />
+		<link rel="stylesheet" type="text/css" href="css/sres.css" />
         <title>SRES Companion</title>
 		
 		<!-- Javascript -->
@@ -53,6 +54,9 @@
 			$(document).on("pagebeforeshow", "#scan", function() {
 				$.sres.showScan();
 			});
+			$(document).on("pagebeforehide", "#scan", function() {
+				$.sres.showIdentifyPersonButton(false);
+			});
 
 			$(document).on("pagebeforeshow", "#identifyperson", function() {
 				$.sres.showIdentifyPerson();
@@ -65,6 +69,11 @@
 			$(document).on("panelbeforeopen", "#rightpanel", function(event, ui) {
 				$.sres.showRightPanel();
 			});
+			$(document).on("panelopen", "#rightpanel", function(event, ui) {
+				$("#rightpanel_userinfo_container").trigger('create');
+				$("#rightpanel_userdata_container").trigger('create');
+				$("#rightpanel_user_container").collapsibleset().trigger('create').collapsibleset('refresh');
+			});
 			
 		</script>
 		
@@ -75,7 +84,7 @@
 		<div data-role="page" id="login" data-theme="a">
 			<div role="main" class="ui-content">
 				<div>
-					<input type="text" name="username" id="username" value="" placeholder="Username">
+					<input type="text" name="username" id="username" value="" placeholder="Username" spellcheck="false">
 					<input type="password" name="password" id="password" value="" placeholder="Password">
 					<select name="login_target" id="login_target">
 						<option value="https://scilearn.sydney.edu.au/sres/">University of Sydney</option>
@@ -119,8 +128,25 @@
 				<div id="scan_customdisplay" data-sres-starthidden="true">
 				</div>
 				<div id="scan_displayresult_container" data-sres-starthidden="true" data-role="collapsible" data-inset="false" data-collapsed="false" data-mini="true" data-collapsed-icon="plus" data-expanded-icon="carat-d">
-					<h4>Data saved</h4>
-					<div id="scan_displayresult"></div>
+					<h4>
+						Data saved
+					</h4>
+					<div class="ui-grid-c">
+						<div id="span_displayresult" class="ui-block-a" style="width:70%; vertical-align:middle;">
+							<span id="scan_displayresult_value"></span>
+							<span id="scan_displayresult_success" class="label label-success" style="display:none;">Success</span>
+						</div>
+						<!-- TODO buttons for redo, undo -->
+						<div class="ui-block-b" style="width:10%; text-align:right;">
+							<a id="scan_displayresult_undo" class="ui-btn ui-corner-all ui-icon-back ui-btn-icon-notext ui-btn-inline" data-mini="true"></a>
+						</div>
+						<div class="ui-block-c" style="width:10%; text-align:right;">
+							<a id="scan_displayresult_redo" class="ui-btn ui-corner-all ui-icon-refresh ui-btn-icon-notext ui-btn-inline" data-mini="true"></a>
+						</div>
+						<div class="ui-block-d" style="width:10%; text-align:right;">
+							<a id="scan_displayresult_delete" class="ui-btn ui-corner-all ui-icon-delete ui-btn-icon-notext ui-btn-inline" data-mini="true"></a>
+						</div>
+					</div>
 				</div>
 				<div id="scan_dataentry_container" data-sres-starthidden="true" data-role="collapsible" data-inset="false" data-collapsed="false" data-mini="true" data-collapsed-icon="plus" data-expanded-icon="carat-d">
 					<h3 id="scan_dataentry_header" class="ui-bar ui-bar-a">Data entry</h3>
@@ -184,18 +210,14 @@
 		<!-- Div for right panel -->
 		<div data-role="panel" id="rightpanel" data-position="right" data-display="overlay" data-theme="a">
 			<button data-rel="close" class="ui-btn ui-btn-right ui-icon-delete ui-btn-icon-notext"></button>
-			<div id="rightpanel_heading"></div>
-			<div data-role="tabs">
-				<div data-role="navbar">
-					<ul>
-						<li><a href="#rightpanel_userinfo_container" data-ajax="false">Info</a></li>
-						<li><a href="#rightpanel_userdata_container" data-ajax="false">Data</a></li>
-					</ul>
-				</div>
-				<div id="rightpanel_userinfo_container">
+			<br />
+			<div id="rightpanel_user_container" data-role="collapsible-set" data-inset="false">
+				<div id="rightpanel_userinfo_container" data-role="collapsible" data-mini="true">
+					<h4 id="rightpanel_userinfo_heading">Details</h4>
 					<div id="rightpanel_userinfo"></div>
 				</div>
-				<div id="rightpanel_userdata_container">
+				<div id="rightpanel_userdata_container" data-role="collapsible" data-mini="true" data-collapsed="false">
+					<h4 id="rightpanel_userdata_heading">Data</h4>
 					<div id="rightpanel_userdata"></div>
 				</div>
 			</div>

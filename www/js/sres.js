@@ -81,6 +81,32 @@ $.sres.testonly.possibleValues = [
 ];
 
 
+
+$.sres.consts = {
+	'userinfo': [
+		{
+			display:'Given names',
+			key:'givenNames'
+		},
+		{
+			display:'Preferred name',
+			key:'preferredName'
+		},
+		{
+			display:'Surname',
+			key:'surname'
+		},
+		{
+			display:'Username',
+			key:'username'
+		},
+		{
+			display:'Email address',
+			key:'email'
+		}
+	]
+};
+
 /* **********************************
 	   User interactivity functions 
    *********************************** */
@@ -91,7 +117,7 @@ $.sres.scanControlCode = function() {
 $.sres.scanControlCodeCallback = function(result) {
 	if (result.success && !result.cancelled && result.result) {
 		alert(result.result);
-		// TODO redirect to correct column (after checking it is an accessible column)
+		// TODO when appropriate API is ready: redirect to correct column (after checking it is an accessible column)
 		
 	} else {
 		alert('Error with scan: ' + JSON.stringify(result));
@@ -122,6 +148,7 @@ $.sres.showScan = function() {
 		// No current column specified - redirect.
 		$.sres.redirectPage('selectcolumn');
 	} else if ( typeof session.scan.entryMethod === 'undefined' ) {
+		$.sres.showIdentifyPersonButton(false);
 		// Display the select scan entry method.
 		$("#scan_selectentrymethod").show();
 		// Bind select entrymethod.
@@ -225,6 +252,10 @@ $.sres.scanStudentCallback = function(result) {
 	return true;
 };
 
+/* Called during data entry process after a person has been identified for data entry.
+   This method needs to determine what to do depending on the current entryMethod.
+	 userId: string of _id of target person.
+*/
 $.sres.scanUserIdentified = function(userId) {
 	session.scan.targetUserId = userId;
 	switch (session.scan.entryMethod) {
@@ -235,6 +266,7 @@ $.sres.scanUserIdentified = function(userId) {
 			// Collapse and expand relevant collapsibles.
 			$.sres.scanActionsCollapse(true);
 			$.sres.scanDataentryCollapse(false);
+			$("#scan_displayresult_container").hide();
 			// Show custom display.
 			$.sres.showCustomDisplay(userId);
 			// Show data entry.
@@ -295,7 +327,7 @@ $.sres.showSelectColumnLoadColumns = function(paperid) {
 			html += '<li><a href="javascript:$.sres.activateColumn(\'' + column._id + '\')">' + column.name + '</a></li>';
 		});
 		$('ul[data-role=listview][data-sres-paperid=' + paperid + ']').append(html).listview('refresh');
-		$("#selectcolumn_columnlist").collapsibleset('refresh'); // TODO fix up
+		$("#selectcolumn_columnlist").collapsibleset('refresh');
 	};
 };
 
@@ -303,23 +335,30 @@ $.sres.identifyPerson = function() {
 	$.sres.redirectPage('identifyperson');
 };
 $.sres.showIdentifyPerson = function() {
+	// Acivate the filterable.
 	$.sres.activateFindPersonFilter('identifyperson_search_results', '$.sres.identifyPersonShowData');
+	// Clear session.rightPanel.
+	session.rightPanel = {};
 };
-$.sres.showIdentifyPersonButton = function() {
-	$("a[id=header_rightpanel]").show();
+$.sres.showIdentifyPersonButton = function(show) {
+	if (typeof show === 'undefined' || show == true) {
+		$("a[id=header_rightpanel]").show();
+	} else {
+		session.rightPanel = {};
+		$("a[id=header_rightpanel]").hide();
+	}
 };
-$.sres.identifyPersonShowData = function(data) {
-	$.sres.showIdentifyPersonButton();
-	alert(data);
-	// TODO
-	
+$.sres.identifyPersonShowData = function(userId) {
+	// Save target userId for rightpanel.
+	session.rightPanel.userId = userId;
+	// Activate the rightpanel.
 	$("#rightpanel").panel('open');
 };
 
 $.sres.showRightPanel = function() {
 	$("#rightpanel_heading").html('');
+	$("#rightpanel_userinfo").html('');
 	$("#rightpanel_userdata").html('');
-	$("#rightpanel_userdata_container").trigger('create');
 	if (typeof session.rightPanel.userId === 'undefined') {
 		$("#rightpanel_userdata").html('No target user defined');
 		return false;
@@ -332,13 +371,24 @@ $.sres.showRightPanel = function() {
 			token: session.api.token
 		},
 		success: function(data) {
-			$("#rightpanel_heading").html(
-				'<h3>' + data.preferredName + ' ' + data.surname + '</h3>'
-			).trigger('create');
-			
+			// Label headings.
+			$("#rightpanel_userinfo_heading").html(data.preferredName + "'s details");
+			$("#rightpanel_userdata_heading").html(data.preferredName + "'s data");
+			// Show user details in collapsible.
+			$.sres.consts.userinfo.forEach(function(fieldset){
+				var key = fieldset.key;
+				var display = fieldset.display;
+				$("#rightpanel_userinfo").append(
+					'<div class="ui-field-contain" id="rightpanel-userinfo-field-' + key + '">' +  
+	    				'<label for="rightpanel-userinfo-textinput-' + key + '">' + display + '</label>' + 
+	    				'<input type="text" name="rightpanel-userinfo-textinput-' + key + '" id="rightpanel-userinfo-textinput-' + key + '" readonly="true" value="' + data[key] + '">' + 
+					'</div>'
+				);
+				$("#rightpanel-userinfo-field-" + key).trigger('create');
+			});
 		},
 		error: function(data) {
-		
+			$("#rightpanel_userinfo").html('Failed to get user details from server');
 		}
 	});
 	// Fetch userdata from server.
@@ -353,11 +403,12 @@ $.sres.showRightPanel = function() {
 				// Add a display row.
 				var i = column.index;
 				$("#rightpanel_userdata").append(
-					'<div class="ui-field-contain" id="rightpanel-field-' + i + '">' +  
-	    				'<label for="rightpanel-textinput-' + i + '">' + column.name + '</label>' + 
-	    				'<input type="text" name="rightpanel-textinput-' + i + '" id="rightpanel-textinput-' + i + '" readonly="true">' + 
+					'<div class="ui-field-contain" id="rightpanel-userdata-field-' + i + '">' +  
+	    				'<label for="rightpanel-userdata-textinput-' + i + '">' + column.name + '</label>' + 
+	    				'<input type="text" name="rightpanel-userdata-textinput-' + i + '" id="rightpanel-userdata-textinput-' + i + '" readonly="true">' + 
 					'</div>'
 				);
+				$("#rightpanel-userdata-field-" + i).trigger('create');
 				// Get the data for this user for this column.
 				$.ajax({
 					url: session.api.target + 'api/userdata',
@@ -370,8 +421,7 @@ $.sres.showRightPanel = function() {
 					success: function(data) {
 						console.log(i, data);
 						if (data.colref == column._id && data.userref == session.rightPanel.userId) {
-							$("input[id=rightpanel-textinput-" + i + "]").val(data.data[0].value);
-							$("#rightpanel-field-" + i).trigger('create');
+							$("input[id=rightpanel-userdata-textinput-" + i + "]").val(data.data[0].value);
 						} else {
 							console.log('colref or userref mismatch', data);
 						}
@@ -381,6 +431,7 @@ $.sres.showRightPanel = function() {
 					}
 				});
 			});
+			//$("#rightpanel_user_container").collapsibleset('refresh');
 		},
 		error: function(data) {
 			$("#rightpanel_userdata").html('Could not retrieve paper information.');
@@ -398,6 +449,8 @@ $.sres.logout = function() {
 			token: session.api.token
 		},
 		success: function(data) {
+			$("#selectcolumn_columnlist").html('');
+			$.sres.showIdentifyPersonButton(false);
 			$.sres.clearSession();
 			$.sres.redirectPage('login');
 		},
@@ -428,9 +481,10 @@ $.sres.activateColumn = function(columnid) {
 	});
 };
 
-/* Activates the filterable for a specified elementId.
+/* Activates the filterable for a specified elementId to search for a person and then select them.
+   Uses api/users to search. Calls the target function with argument of found and selected person's userId.
      elementId: id of element
-	 target: function to call with id of selected user
+	 target: function to call with id of selected person.
 */
 $.sres.activateFindPersonFilter = function(elementId, target) {
 	$("#" + elementId).on('filterablebeforefilter', function(e, data) {
@@ -451,12 +505,19 @@ $.sres.activateFindPersonFilter = function(elementId, target) {
 				}
 			}).then(function(response) {
 				$.each(response, function(i, data) {
-					html += '<li><a href="javascript:' + target + '(\'' + data._id + '\');">' + data.preferredName + ' ' + data.surname + '</a></li>';
+					html += '<li><a href="#" onclick="' + target + '(\'' + data._id + '\');return false;">' + data.preferredName + ' ' + data.surname + ' (' + data.username + ')</a></li>';
 				});
 				$ul.html(html);
 				$ul.listview('refresh');
 				$ul.trigger('updatelayout');
 			});
+		}
+	});
+	$($("#" + elementId).attr('data-input')).keyup(function(event) {
+		if (event.which == 13) {
+			if ($("#" + elementId + " li:visible").length == 1) {	
+				$("#" + elementId + " li:visible a").trigger('click');
+			}
 		}
 	});
 };
@@ -498,6 +559,8 @@ $.sres.clearSession = function() {
 };
 
 $.sres.login = function(username, password, target) {
+	$.mobile.loading('show');
+	$("#login_submit").button('disable');
 	$.ajax({
 		url: target + 'api/login',
 		method: 'POST',
@@ -522,6 +585,10 @@ $.sres.login = function(username, password, target) {
 			// Process
 			$("#login_failed").show('fast');
 			$("input[id=password]").val('').focus();
+		},
+		complete: function() {
+			$.mobile.loading('hide');		
+			$("#login_submit").button('enable');
 		}
 	});
 };
@@ -577,6 +644,7 @@ $.sres.saveUserData = function(userId, data) {
 	// Update session.
 	session.rightPanel.userId = userId;
 	// POST data to server.
+	$.mobile.loading('show');
 	$.ajax({
 		url: session.api.target + 'api/userdata',
 		method: 'POST',
@@ -593,6 +661,9 @@ $.sres.saveUserData = function(userId, data) {
 		error: function(data) {
 			alert('Error saving data.');
 			return false;
+		},
+		complete: function() {
+			$.mobile.loading('hide');		
 		}
 	});
 };
@@ -613,6 +684,8 @@ $.sres.dataEntry = function(data) {
 		case 'scanselect':
 			// This means the user has just chosen some data to apply to an already-scanned student.
 			$.sres.saveUserData(session.scan.targetUserId, value);
+			$.sres.scanDataentryCollapse(true);
+			$.sres.scanActionsCollapse(false);
 			break;
 	}
 	return true;
@@ -626,12 +699,39 @@ $.sres.changeEntryMethod = function() {
 	return true;
 };
 
+/* Called when some data has been successfully saved for a person.
+	 result: raw result object returned from POSTing to API
+	 userId: string user _id
+*/
 $.sres.showSavedData = function(result, userId) {
 	// Update session.
 	session.rightPanel.userId = userId;
 	// Show recorded data.
-	$("#scan_displayresult").html(result.data[0].value);
+	$("#scan_displayresult_value").html(result.data[0].value);
+	$("#scan_displayresult_success").fadeIn().delay(1000).fadeOut();
 	$("#scan_displayresult_container").show();
+	$("#scan_displayresult_container").collapsible('expand');
+	// Show and activate buttons.
+	if (typeof result.data[1] === 'undefined') {
+		$("#scan_displayresult_undo").unbind().bind('click', function(){
+			$.sres.saveUserData(session.scan.targetUserId, '');
+			return false;
+		});
+	} else {
+		$("#scan_displayresult_undo").unbind().bind('click', function(){
+			$.sres.saveUserData(session.scan.targetUserId, result.data[1].value);
+			return false;
+		});
+	}
+	$("#scan_displayresult_redo").unbind().bind('click', function(){
+		$("#scan_displayresult_container").collapsible('collapse');
+		$.sres.scanDataentryCollapse(false);
+		return false;
+	});
+	$("#scan_displayresult_delete").unbind().bind('click', function(){
+		$.sres.saveUserData(session.scan.targetUserId, '');
+		return false;
+	});
 	// Show custom display.
 	$.sres.showCustomDisplay(userId);
 	// Enable right panel info button.
@@ -646,7 +746,7 @@ $.sres.showCustomDisplay = function(userId) {
 			token: session.api.token
 		},
 		success: function(data) {
-			// TODO
+			// TODO when API is ready
 			console.log(data);
 			$("#scan_customdisplay")
 				.html('<h3>' + data.preferredName + ' ' + data.surname + '</h3>')
@@ -667,6 +767,7 @@ $.sres.scanActionsReset = function() {
 
 $.sres.scanActionsCollapse = function(collapse) {
 	$.sres.changeCollapse('scan_actions_container', collapse);
+	$.sres.scanActionsReset();
 	return true;
 };
 
@@ -685,6 +786,6 @@ $.sres.changeCollapse = function(elementId, collapse) {
 };
 
 $.sres.takePhoto = function() {
-	// TODO
+	// TODO after MVP
 	
 };
