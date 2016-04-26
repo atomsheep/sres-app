@@ -68,18 +68,17 @@
 			
 			$(document).on("panelbeforeopen", "#rightpanel", function(event, ui) {
 				$.sres.showRightPanel();
+				$("#rightpanel_userinfo_container").trigger('create');
+				$("#rightpanel_userdata_container").trigger('create');
 			});
 			$(document).on("panelclose", "#rightpanel", function(event, ui) {
 				$("#rightpanel_userinfo").html('');
+				$("#rightpanel_userinfo_heading").html('Details');
 				$("#rightpanel_userinfo_container").collapsible('destroy');
 				$("#rightpanel_userdata").html('');
+				$("#rightpanel_userdata_heading").html('Data');
 				$("#rightpanel_userdata_container").collapsible('destroy');
 				//$("#rightpanel_user_container").collapsibleset('destroy');
-			});
-			$(document).on("panelopen", "#rightpanel", function(event, ui) {
-				$("#rightpanel_userinfo_container").trigger('create');
-				$("#rightpanel_userdata_container").trigger('create');
-				//$("#rightpanel_user_container").collapsibleset('refresh');
 			});
 			
 		</script>
