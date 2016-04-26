@@ -410,7 +410,8 @@ $.sres.showRightPanel = function() {
 				$("#rightpanel_userdata").append(
 					'<div class="ui-field-contain" id="rightpanel-userdata-field-' + i + '">' +  
 	    				'<label for="rightpanel-userdata-textinput-' + i + '">' + column.name + '</label>' + 
-	    				'<input type="text" name="rightpanel-userdata-textinput-' + i + '" id="rightpanel-userdata-textinput-' + i + '" readonly="true">' + 
+	    				'<span id="rightpanel-userdata-loading-' + i + '" class="label label-info">Loading...</span>' +
+						'<input type="text" name="rightpanel-userdata-textinput-' + i + '" id="rightpanel-userdata-textinput-' + i + '" readonly="true">' + 
 					'</div>'
 				);
 				$("#rightpanel-userdata-field-" + i).trigger('create');
@@ -427,6 +428,7 @@ $.sres.showRightPanel = function() {
 						console.log(i, data);
 						if (data.colref == column._id && data.userref == session.rightPanel.userId) {
 							$("input[id=rightpanel-userdata-textinput-" + i + "]").val(data.data[0].value);
+							$("span[id=rightpanel-userdata-loading-" + i + "]").fadeOut();
 						} else {
 							console.log('colref or userref mismatch', data);
 						}
@@ -437,6 +439,7 @@ $.sres.showRightPanel = function() {
 				});
 			});
 			//$("#rightpanel_user_container").collapsibleset('refresh');
+			$("#rightpanel_user_container").trigger('create');
 		},
 		error: function(data) {
 			$("#rightpanel_userdata").html('Could not retrieve paper information.');
