@@ -310,6 +310,7 @@ $.sres.showSelectColumn = function() {
 				html += '<ul data-role="listview" data-sres-paperid="' + paper._id + '">';
 				html += '</ul>';
 				html += '</div>';
+				// Fetch columns for this paper from server.
 				$.ajax({
 					url: session.api.target + 'api/columns/' + paper._id,
 					method: 'GET',
@@ -322,9 +323,8 @@ $.sres.showSelectColumn = function() {
 						data.forEach(function(column) {
 							html += '<li><a href="javascript:$.sres.activateColumn(\'' + column._id + '\')">' + column.name + '</a></li>';
 						});
-						$('ul[data-role=listview][data-sres-paperid=' + paper._id + ']').append(html).listview('refresh');
+						$('ul[data-role=listview][data-sres-paperid=' + paper._id + ']').html(html).listview('refresh');
 						$("#selectcolumn_columnlist").collapsibleset('refresh');
-						
 					},
 					error: function(data) {
 						alert('Error fetching columns from server for paper id ' + paper._id);
