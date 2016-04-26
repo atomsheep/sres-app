@@ -289,6 +289,9 @@ $.sres.selectColumn = function() {
 	$.sres.redirectPage('selectcolumn');
 };
 $.sres.showSelectColumn = function() {
+	// Flush current list.
+	$("#selectcolumn_columnlist").html('');
+	// Retrieve list from server.
 	$.ajax({
 		url: session.api.target + 'api/papers',
 		method: 'GET',
@@ -311,7 +314,16 @@ $.sres.showSelectColumn = function() {
 					data: {
 						token: session.api.token
 					},
-					success: $.sres.showSelectColumnLoadColumns(paper._id),
+					success: function(data) {
+						var html = '';
+						console.log(data);
+						data.forEach(function(column) {
+							html += '<li><a href="javascript:$.sres.activateColumn(\'' + column._id + '\')">' + column.name + '</a></li>';
+						});
+						$('ul[data-role=listview][data-sres-paperid=' + paper._id + ']').append(html).listview('refresh');
+						$("#selectcolumn_columnlist").collapsibleset('refresh');
+						
+					},
 					error: function(data) {
 						alert('Error fetching columns from server for paper id ' + paper._id);
 					}
@@ -323,17 +335,6 @@ $.sres.showSelectColumn = function() {
 			alert('Error fetching papers from server for paper id');
 		}
 	});
-};
-$.sres.showSelectColumnLoadColumns = function(paperid) {
-	return function(data, textStatus, jqXHR) {
-		html = '';
-		console.log(data);
-		data.forEach(function(column) {
-			html += '<li><a href="javascript:$.sres.activateColumn(\'' + column._id + '\')">' + column.name + '</a></li>';
-		});
-		$('ul[data-role=listview][data-sres-paperid=' + paperid + ']').append(html).listview('refresh');
-		$("#selectcolumn_columnlist").collapsibleset('refresh');
-	};
 };
 
 $.sres.identifyPerson = function() {
@@ -438,7 +439,7 @@ $.sres.showRightPanel = function() {
 					}
 				});
 			});
-			//$("#rightpanel_user_container").collapsibleset('refresh');
+			$("#rightpanel_user_container").collapsibleset().collapsibleset('destroy');
 			$("#rightpanel_user_container").trigger('create');
 		},
 		error: function(data) {
@@ -449,6 +450,7 @@ $.sres.showRightPanel = function() {
 };
 
 $.sres.logout = function() {
+	$.mobile.loading('show');
 	$("#leftpanel").panel("close");
 	$.ajax({
 		url: session.api.target + 'api/logout',
@@ -464,6 +466,9 @@ $.sres.logout = function() {
 		},
 		error: function(data) {
 			alert('Error logging out');
+		},
+		complete: function() {
+			$.mobile.loading('hide');
 		}
 	});
 };
