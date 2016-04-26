@@ -158,9 +158,10 @@ $.sres.showScan = function() {
 		$.sres.showIdentifyPersonButton(false);
 		$("#leftpanel_changeentrymethod").show();
 		// Need to show the data entry interface first.
-		$("#scan_dataentry_header").html('Select data to apply to multiple').trigger('create');
 		$("#scan_dataentry_container").show();
+		$("#scan_dataentry_header a").text('Select data to apply to multiple');
 		$.sres.scanPopulateDataentry();
+		$("#scan_dataentry_container").collapsible('expand');
 	} else {
 		$("#leftpanel_changeentrymethod").show();
 		// Should be all good to display usual scan interface.
@@ -275,6 +276,7 @@ $.sres.scanUserIdentified = function(userId) {
 			// Show custom display.
 			$.sres.showCustomDisplay(userId);
 			// Show data entry.
+			$("#scan_dataentry_header a").text('Data entry');
 			$.sres.scanPopulateDataentry();
 			// Show rightpanel button.
 			session.rightPanel.userId = userId;
